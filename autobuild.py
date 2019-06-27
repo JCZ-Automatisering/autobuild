@@ -44,12 +44,12 @@ def execute_in_docker(command):
     execute("cat %s | tail -n 1" % __tmp_name)
 
     command = "/bin/sh %s" % __tmp_name
-    HOME = os.getenv("HOME")
-    if not HOME:
+    home = os.getenv("HOME")
+    if not home:
         error("HOME not set!")
 
-    HOME_VOL_AND_VAR = "-v %s:%s -e HOME=%s" % (HOME, HOME, HOME)
-    docker_base = "docker run --rm -it --name %s %s" % (docker_name, HOME_VOL_AND_VAR)
+    home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
+    docker_base = "docker run --rm -it --name %s %s" % (docker_name, home_vol_and_var)
     docker_cmd = "%s -v $PWD:$PWD -w $PWD -u $(id -u) %s %s" % \
                  (docker_base, docker_name, command)
     execute(docker_cmd)
@@ -76,7 +76,8 @@ with open("Jenkinsfile", "r") as jf:
             split = line.split("'")
             stage = split[1]
 
-        if line.startswith("dockerImage.inside("):
+        # if line.startswith("dockerImage.inside("):
+        if line.find("docker") != -1 and line.find(".inside(") != -1:
             line = jf.readline()    # get next line which contains shell command
             split = line.strip()[4:][:-2]
             steps.append({"name": stage, "command": split})
