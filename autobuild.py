@@ -78,16 +78,22 @@ with open("Jenkinsfile", "r") as jf:
 
         # if line.startswith("dockerImage.inside("):
         if line.find("docker") != -1 and line.find(".inside(") != -1:
-            line = jf.readline()    # get next line which contains shell command
-            split = line.strip()[4:][:-2]
-            steps.append({"name": stage, "command": split})
+            step_counter = 0
+            while True:
+                line = jf.readline()    # get next line which contains shell command
+                if "}" in line:
+                    break
+                split = line.strip()[4:][:-2]
+                steps.append({"name": "%s:%d" % (stage, step_counter), "command": split})
+                step_counter += 1
         line = jf.readline()
 
 
 if os.getenv("NO_BUILD"):
     for item in steps:
-        print("Step: %s" % item['name'])
+        print("Step: %s \t\tCommand: %s" % (item['name'], item['command']))
     print("NO_BUILD set, stopping now")
+    exit(0)
 
 for item in steps:
     print("Step: %s" % item['name'])
