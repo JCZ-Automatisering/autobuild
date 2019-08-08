@@ -50,7 +50,7 @@ def execute_in_docker(command):
 
     home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
     docker_base = "docker run --rm -it --name %s %s" % (docker_name, home_vol_and_var)
-    docker_cmd = "%s -v $PWD:$PWD -w $PWD -u $(id -u) %s %s" % \
+    docker_cmd = "%s -v $PWD:$PWD -v /etc/passwd:/etc/passwd -w $PWD -u $(id -u) %s %s" % \
                  (docker_base, docker_name, command)
     execute(docker_cmd)
 
