@@ -44,15 +44,19 @@ def execute_in_docker(command):
     execute("cat %s | tail -n 1" % __tmp_name)
 
     command = "/bin/sh %s" % __tmp_name
-    home = os.getenv("HOME")
-    if not home:
-        error("HOME not set!")
+    if os.getenv("NO_DOCKER"):
+        # just run it without docker...
+        execute(command)
+    else:
+        home = os.getenv("HOME")
+        if not home:
+            error("HOME not set!")
 
-    home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
-    docker_base = "docker run --rm -it --name %s %s" % (docker_name, home_vol_and_var)
-    docker_cmd = "%s -v $PWD:$PWD -v /etc/passwd:/etc/passwd -w $PWD -u $(id -u) %s %s" % \
-                 (docker_base, docker_name, command)
-    execute(docker_cmd)
+        home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
+        docker_base = "docker run --rm -it --name %s %s" % (docker_name, home_vol_and_var)
+        docker_cmd = "%s -v $PWD:$PWD -v /etc/passwd:/etc/passwd -w $PWD -u $(id -u) %s %s" % \
+                     (docker_base, docker_name, command)
+        execute(docker_cmd)
 
     os.unlink(__tmp_name)
 
