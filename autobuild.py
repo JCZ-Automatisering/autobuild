@@ -102,3 +102,5 @@ if os.getenv("NO_BUILD"):
 for item in steps:
     print("Step: %s" % item['name'])
     execute_in_docker(item['command'])
+
+print("\nautobuild success: ran without any errors")
