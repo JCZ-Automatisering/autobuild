@@ -13,15 +13,32 @@ def error(msg):
     sys.exit(1)
 
 
-if not os.path.exists(CONFIG_FILE):
-    error("config file %s does not exist" % CONFIG_FILE)
+env_dockerfile = os.getenv("DOCKERFILE")
+env_jenkinsfile = os.getenv("JENKINSFILE")
 
-cp = configparser.ConfigParser()
-cp.read(CONFIG_FILE)
-config = cp[CONFIG_SECTION]
+if env_dockerfile and env_jenkinsfile:
+    print("Using environment settings Dockerfile = %s and Jenkinsfile = %s" %
+          (env_dockerfile, env_jenkinsfile))
 
-docker_name = config['name']
-docker_file = config['dockerfile']
+    docker_file = env_dockerfile
+    jenkins_file = env_jenkinsfile
+    docker_name = "autobuild_manual"
+
+else:
+    print("Using settings from configuration")
+
+    if not os.path.exists(CONFIG_FILE):
+        error("config file %s does not exist" % CONFIG_FILE)
+
+    cp = configparser.ConfigParser()
+    cp.read(CONFIG_FILE)
+    config = cp[CONFIG_SECTION]
+
+    docker_name = config['name']
+    docker_file = config['dockerfile']
+    jenkins_file = config['jenkinsfile']
+
+
 docker_file_dir = os.path.dirname(docker_file)
 
 
@@ -71,7 +88,7 @@ if len(sys.argv) > 1:
 
 steps = []
 
-with open("Jenkinsfile", "r") as jf:
+with open(jenkins_file, "r") as jf:
     stage = ""
     line = jf.readline()
     while line:
