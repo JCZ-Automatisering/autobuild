@@ -75,6 +75,8 @@ def execute_in_docker(command):
         docker_cmd = "%s -v $PWD:$PWD -e VERBOSE={verbose} -v /etc/passwd:/etc/passwd -w $PWD -u $(id -u) %s %s" % \
                      (docker_base, docker_name, command)
         docker_cmd = docker_cmd.format(verbose=verbose_var)
+        if os.getenv("STEP"):
+            input()
         execute(docker_cmd)
 
     os.unlink(__tmp_name)
