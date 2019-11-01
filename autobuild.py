@@ -78,10 +78,14 @@ def execute_in_docker(command):
     os.unlink(__tmp_name)
 
 
-cmd = "docker build -t {docker_name} -f {docker_file_name} .".format(
+if os.getenv("NO_DOCKER"):
+    print("Not building the docker image")
+else:
+    cmd = "docker build -t {docker_name} -f {docker_file_name} .".format(
         docker_name=docker_name, docker_file_name=docker_file
     )
-execute(cmd)
+    execute(cmd)
+
 execute("mkdir -p tmp")
 
 if len(sys.argv) > 1:
