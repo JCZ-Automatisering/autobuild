@@ -71,7 +71,7 @@ def execute_in_docker(command):
 
         home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
         docker_base = "docker run --rm -it --name %s %s" % (docker_name, home_vol_and_var)
-        verbose_var = os.getenv("VERBOSE")
+        verbose_var = os.getenv("VERBOSE", "")
         docker_cmd = "%s -v $PWD:$PWD -e VERBOSE={verbose} -v /etc/passwd:/etc/passwd -w $PWD -u $(id -u) %s %s" % \
                      (docker_base, docker_name, command)
         docker_cmd = docker_cmd.format(verbose=verbose_var)
