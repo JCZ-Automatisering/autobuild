@@ -70,11 +70,12 @@ def execute_in_docker(command):
             error("HOME not set!")
 
         home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
+        other_volumes = "-v /etc/localtime:/etc/localtime -v /usr/share/zoneinfo:/user/share/zoneinfo"
         docker_base = "docker run --rm -it --name %s %s" % (docker_name, home_vol_and_var)
         verbose_var = os.getenv("VERBOSE", "")
-        docker_cmd = "%s -v $PWD:$PWD -e VERBOSE={verbose} -v /etc/passwd:/etc/passwd -w $PWD -u $(id -u) %s %s" % \
+        docker_cmd = "%s -v $PWD:$PWD -e VERBOSE={verbose} {other_volumes} -v /etc/passwd:/etc/passwd -w $PWD -u $(id -u) %s %s" % \
                      (docker_base, docker_name, command)
-        docker_cmd = docker_cmd.format(verbose=verbose_var)
+        docker_cmd = docker_cmd.format(verbose=verbose_var, other_volumes=other_volumes)
         if os.getenv("STEP"):
             input()
         execute(docker_cmd)
