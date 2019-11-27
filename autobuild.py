@@ -15,6 +15,8 @@ def error(msg):
 
 env_dockerfile = os.getenv("DOCKERFILE")
 env_jenkinsfile = os.getenv("JENKINSFILE")
+env_step = os.getenv("STEP")
+
 
 if env_dockerfile and env_jenkinsfile:
     print("Using environment settings Dockerfile = %s and Jenkinsfile = %s" %
@@ -73,10 +75,11 @@ def execute_in_docker(command):
         other_volumes = "-v /etc/localtime:/etc/localtime -v /usr/share/zoneinfo:/user/share/zoneinfo"
         docker_base = "docker run --rm -it --name %s %s" % (docker_name, home_vol_and_var)
         verbose_var = os.getenv("VERBOSE", "")
-        docker_cmd = "%s -v $PWD:$PWD -e VERBOSE={verbose} {other_volumes} -v /etc/passwd:/etc/passwd -w $PWD -u $(id -u) %s %s" % \
+        docker_cmd = "%s -v $PWD:$PWD -e VERBOSE={verbose} {other_volumes} -v /etc/passwd:/etc/passwd -w $PWD " \
+                     "-u $(id -u) %s %s" % \
                      (docker_base, docker_name, command)
         docker_cmd = docker_cmd.format(verbose=verbose_var, other_volumes=other_volumes)
-        if os.getenv("STEP"):
+        if os.getenv("WAIT"):
             input()
         execute(docker_cmd)
 
@@ -129,7 +132,15 @@ if os.getenv("NO_BUILD"):
     exit(0)
 
 for item in steps:
-    print("Step: %s" % item['name'])
-    execute_in_docker(item['command'])
+    name = item['name']
+    if env_step:
+        print('checking step %s' % name)
+        if env_step.upper() in name.upper():
+            print("Step: %s" % name)
+            execute_in_docker(item['command'])
+        # else: skip because we are only interested in on "STEP"
+    else:
+        print("Step: %s" % name)
+        execute_in_docker(item['command'])
 
 print("\nautobuild success: ran without any errors")
