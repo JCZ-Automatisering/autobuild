@@ -143,4 +143,4 @@ for item in steps:
         print("Step: %s" % name)
         execute_in_docker(item['command'])
 
-print("\nautobuild success: ran without any errors")
+print("\nautobuild success: ran successfully")
