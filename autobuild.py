@@ -143,4 +143,6 @@ for item in steps:
         print("Step: %s" % name)
         execute_in_docker(item['command'])
 
+    os.system("sync")
+
 print("\nautobuild success: ran successfully")
