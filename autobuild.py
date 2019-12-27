@@ -3,6 +3,7 @@
 import os
 import sys
 import configparser
+import time
 
 CONFIG_FILE = "autobuild.ini"
 CONFIG_SECTION = "autobuild"
@@ -17,6 +18,11 @@ env_dockerfile = os.getenv("DOCKERFILE")
 env_jenkinsfile = os.getenv("JENKINSFILE")
 env_step = os.getenv("STEP")
 
+if env_dockerfile and not env_jenkinsfile or \
+        env_jenkinsfile and not env_dockerfile:
+    print("WARNING: you have to specify both DOCKERFILE and JENKINSFILE for this functionality to work!")
+    print(" continue in 1 second...")
+    time.sleep(1)
 
 if env_dockerfile and env_jenkinsfile:
     print("Using environment settings Dockerfile = %s and Jenkinsfile = %s" %
