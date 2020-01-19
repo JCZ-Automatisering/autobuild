@@ -114,7 +114,7 @@ with open(jenkins_file, "r") as jf:
     line = jf.readline()
     while line:
         line = line.strip()
-        if line.startswith("#"):
+        if line.startswith("#") or line.startswith("//"):
             line = jf.readline()
             continue
         if line.startswith("stage('"):
