@@ -114,6 +114,9 @@ with open(jenkins_file, "r") as jf:
     line = jf.readline()
     while line:
         line = line.strip()
+        if line.startswith("#"):
+            line = jf.readline()
+            continue
         if line.startswith("stage('"):
             split = line.split("'")
             stage = split[1]
