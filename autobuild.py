@@ -17,6 +17,8 @@ def error(msg):
 env_dockerfile = os.getenv("DOCKERFILE")
 env_jenkinsfile = os.getenv("JENKINSFILE")
 env_step = os.getenv("STEP")
+env_until = os.getenv("UNTIL")
+
 
 if env_dockerfile and not env_jenkinsfile or \
         env_jenkinsfile and not env_dockerfile:
@@ -151,6 +153,10 @@ for item in steps:
     else:
         print("Step: %s" % name)
         execute_in_docker(item['command'])
+        if env_until:
+            if env_until in name:
+                print("Until %s reached. Stopping." % env_until)
+                exit(0)
 
     os.system("sync")
 
