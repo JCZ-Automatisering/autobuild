@@ -18,6 +18,7 @@ env_dockerfile = os.getenv("DOCKERFILE")
 env_jenkinsfile = os.getenv("JENKINSFILE")
 env_step = os.getenv("STEP")
 env_until = os.getenv("UNTIL")
+env_skip = os.getenv("SKIP", "").split(",")
 
 
 if env_dockerfile and not env_jenkinsfile or \
@@ -81,7 +82,7 @@ def execute_in_docker(command):
 
         home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
         other_volumes = "-v /etc/localtime:/etc/localtime -v /usr/share/zoneinfo:/user/share/zoneinfo"
-        docker_base = "docker run --rm -it --name %s %s" % (docker_name, home_vol_and_var)
+        docker_base = "docker run --rm --name %s %s" % (docker_name, home_vol_and_var)
         verbose_var = os.getenv("VERBOSE", "")
         docker_cmd = "%s -v $PWD:$PWD -e VERBOSE={verbose} {other_volumes} -v /etc/passwd:/etc/passwd -w $PWD " \
                      "-u $(id -u) %s %s" % \
@@ -152,7 +153,15 @@ for item in steps:
         # else: skip because we are only interested in on "STEP"
     else:
         print("Step: %s" % name)
-        execute_in_docker(item['command'])
+        execute_this_step = True
+        for skip_item in env_skip:
+            if skip_item in name:
+                execute_this_step = False
+                break
+        if execute_this_step:
+            execute_in_docker(item['command'])
+        else:
+            print(" skipping step %s as requested" % name)
         if env_until:
             if env_until in name:
                 print("Until %s reached. Stopping." % env_until)
