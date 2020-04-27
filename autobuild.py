@@ -62,6 +62,12 @@ else:
     if EVP in config:
         environment_variables_pass_through = config[EVP].split(",")
 
+    DI = "dockerimage"
+    if DI in config:
+        docker_image = config[DI]
+    else:
+        docker_image = None
+
 
 docker_file_dir = os.path.dirname(docker_file)
 
@@ -75,7 +81,20 @@ def execute(command):
         sys.exit(r)
 
 
-with tempfile.NamedTemporaryFile() as __tmp_name:
+def __generate_variables_string():
+    result = ""
+
+    for var_item in environment_variables_pass_through:
+        var_item_content = os.getenv(var_item)
+        if var_item_content:
+            result += "-e %s=%s " % (var_item, var_item_content)
+
+    return result
+
+
+with tempfile.NamedTemporaryFile() as tmp_file:
+
+    __tmp_name = tmp_file.name
 
     def execute_in_docker(command):
         with open(__tmp_name, "w") as fp:
@@ -93,7 +112,7 @@ with tempfile.NamedTemporaryFile() as __tmp_name:
                 error("HOME not set!")
 
             home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
-            other_volumes = "-v /etc/localtime:/etc/localtime -v /usr/share/zoneinfo:/user/share/zoneinfo"
+            other_volumes = "-v /etc/localtime:/etc/localtime -v /usr/share/zoneinfo:/user/share/zoneinfo -v /tmp:/tmp "
             if sys.stdout.isatty():
                 it_flag = "-it"
             else:
@@ -104,7 +123,9 @@ with tempfile.NamedTemporaryFile() as __tmp_name:
                          "-w $PWD " \
                          "-u $(id -u) %s %s" % \
                          (docker_base, docker_name, command)
-            docker_cmd = docker_cmd.format(verbose=verbose_var, other_volumes=other_volumes)
+            docker_cmd = docker_cmd.format(verbose=verbose_var,
+                                           other_volumes=other_volumes,
+                                           variables=__generate_variables_string())
             if os.getenv("WAIT"):
                 input()
             execute(docker_cmd)
@@ -112,13 +133,19 @@ with tempfile.NamedTemporaryFile() as __tmp_name:
         os.unlink(__tmp_name)
 
 
-    if os.getenv("NO_DOCKER"):
-        print("Not building the docker image")
-    else:
-        cmd = "docker build -t {docker_name} -f {docker_file_name} .".format(
-            docker_name=docker_name, docker_file_name=docker_file
-        )
+    if docker_image:
+        print("Using configured Docker image %s\n" % docker_image)
+        cmd = "docker pull {docker_image}".format(docker_image=docker_image)
         execute(cmd)
+    else:
+        if os.getenv("NO_DOCKER"):
+            print("Not building the docker image\n")
+        else:
+            print("Using locally build Docker image %s\n" % docker_file)
+            cmd = "docker build -t {docker_name} -f {docker_file_name} .".format(
+                docker_name=docker_name, docker_file_name=docker_file
+            )
+            execute(cmd)
 
     execute("mkdir -p tmp")
 
@@ -186,3 +213,4 @@ with tempfile.NamedTemporaryFile() as __tmp_name:
         os.system("sync")
 
     print("\nautobuild success: ran successfully")
+    open(__tmp_name, "w").write("")     # make sure the tmpfile resource manager is able to delete the file
