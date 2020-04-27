@@ -25,4 +25,24 @@ Run `./autobuild.py` to execute the steps in a Docker container without Jenkins
 
 ## Environment flags
 
-<tbd>
+The following environment variables can be used to control certain behaviour of the autobuild script:
+
+|name|Purpose|Explanation|Example
+|----|-------|-----------|-------
+|DOCKERFILE<br>JENKINSFILE|Specify different Dockerfile<br>Specify different Jenkinsfile|Use these variables combined (mandatory) to skip the values from the `autobuild.ini` config file|DOCKERFILE=directory/Dockerfile \ JENKINSFILE=directory/Jenkinsfile \ ./autobuild.py
+|STEP|Run just one Jenkinsfile step|Allow the operator to run just one step from the Jenkinsfile|STEP=doxygen ./autobuild.py
+|UNTIL|Run until a certain step from the Jenkinsfile|Run all steps until (including) a certain step is found|UNTIL=build ./autobuild.py
+|SKIP|Skip one or more steps from the Jenkinsfile|Allow skipping certain steps while executing all others|SKIP=doxygen,cppcheck \ ./autobuild.py
+
+
+## More configuration
+
+The configuration file `autobuild.ini` can also contain the following lines
+
+### dockerimage
+
+When the file contains the line `dockerimage=<image>` the `<image>` is used and pulled using docker without building the `dockerfile=<file>` line.
+
+### environment_variables
+
+When the file contains the line `environment_variables=<list>` the names in this list (, separated) are "relayed" to the Docker instance.
