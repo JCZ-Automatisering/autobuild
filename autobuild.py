@@ -7,8 +7,9 @@ import time
 import tempfile
 
 
-VERSION = 3
+VERSION = 4
 
+AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
 CONFIG_SECTION = "autobuild"
 
@@ -19,6 +20,20 @@ print("Running autobuild v%d" % VERSION)
 def error(msg):
     print("FATAL ERROR: %s" % msg)
     sys.exit(1)
+
+
+if os.path.exists(AUTOBUILD_LOCAL_FILE):
+    lines = open(AUTOBUILD_LOCAL_FILE, "r").readlines()
+    for line in lines:
+        split = line.strip().split("=")
+        if len(split) == 2:
+            var = split[0]
+            value = split[1]
+            if os.getenv(var):
+                print("Not overriding existing environment variable %s" % var)
+            else:
+                print("Configuring environment variable %s from %s" % (var, AUTOBUILD_LOCAL_FILE))
+                os.environ[var] = value
 
 
 env_dockerfile = os.getenv("DOCKERFILE")
