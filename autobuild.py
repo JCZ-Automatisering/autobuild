@@ -7,7 +7,7 @@ import time
 import tempfile
 
 
-VERSION = 4
+VERSION = 5
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -144,8 +144,6 @@ with tempfile.NamedTemporaryFile() as tmp_file:
             if os.getenv("WAIT"):
                 input()
             execute(docker_cmd)
-
-        os.unlink(__tmp_name)
 
 
     if docker_image:
