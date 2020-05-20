@@ -44,6 +44,8 @@ env_skip = os.getenv("SKIP", "").split(",")
 
 environment_variables_pass_through = []
 
+docker_image = None
+
 
 if env_dockerfile and not env_jenkinsfile or \
         env_jenkinsfile and not env_dockerfile:
@@ -82,8 +84,6 @@ else:
     DI = "dockerimage"
     if DI in config:
         docker_image = config[DI]
-    else:
-        docker_image = None
 
 
 docker_file_dir = os.path.dirname(docker_file)
