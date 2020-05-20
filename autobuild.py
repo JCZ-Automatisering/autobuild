@@ -45,6 +45,7 @@ env_skip = os.getenv("SKIP", "").split(",")
 environment_variables_pass_through = []
 
 docker_image = None
+extra_docker_run_args = None
 
 
 if env_dockerfile and not env_jenkinsfile or \
@@ -74,6 +75,8 @@ else:
     docker_name = config['name']
     docker_file = config['dockerfile']
     jenkins_file = config['jenkinsfile']
+    if 'extra_docker_args' in config:
+        extra_docker_run_args = config['extra_docker_args']
 
     EVP = "environment_variables"
     if EVP in config:
@@ -135,9 +138,10 @@ with tempfile.NamedTemporaryFile() as tmp_file:
             docker_base = "docker run --rm %s --name %s %s" % (it_flag, docker_name, home_vol_and_var)
             verbose_var = os.getenv("VERBOSE", "")
             docker_cmd = "%s {variables} -v $PWD:$PWD -e VERBOSE={verbose} {other_volumes} -v /etc/passwd:/etc/passwd " \
+                         "%s " \
                          "-w $PWD " \
                          "-u $(id -u) %s %s" % \
-                         (docker_base, docker_name, command)
+                         (docker_base, (extra_docker_run_args if extra_docker_run_args else ""), docker_name, command)
             docker_cmd = docker_cmd.format(verbose=verbose_var,
                                            other_volumes=other_volumes,
                                            variables=__generate_variables_string())
