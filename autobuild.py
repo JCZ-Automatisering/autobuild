@@ -45,6 +45,7 @@ env_skip = os.getenv("SKIP", "").split(",")
 environment_variables_pass_through = []
 
 docker_image = None
+extra_docker_run_args = None
 
 
 if env_dockerfile and not env_jenkinsfile or \
@@ -60,7 +61,6 @@ if env_dockerfile and env_jenkinsfile:
     docker_file = env_dockerfile
     jenkins_file = env_jenkinsfile
     docker_name = "autobuild_manual"
-    extra_docker_run_args = None
 
 else:
     print("Using settings from configuration")
@@ -75,7 +75,8 @@ else:
     docker_name = config['name']
     docker_file = config['dockerfile']
     jenkins_file = config['jenkinsfile']
-    extra_docker_run_args = config['extra_docker_args']
+    if 'extra_docker_args' in config:
+        extra_docker_run_args = config['extra_docker_args']
 
     EVP = "environment_variables"
     if EVP in config:
