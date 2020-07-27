@@ -8,7 +8,7 @@ import tempfile
 import re
 
 
-VERSION = 6
+VERSION = 7
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -119,7 +119,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
 
     __tmp_name = tmp_file.name
 
-    def execute_in_docker(command):
+    def execute_in_docker(command, interactive=False):
         with open(__tmp_name, "w") as fp:
             fp.write("#!/bin/sh\n\n%s\n" % command)
 
@@ -140,7 +140,9 @@ with tempfile.NamedTemporaryFile() as tmp_file:
                 it_flag = "-it"
             else:
                 it_flag = ""
-            docker_base = "docker run --rm %s --name %s %s" % (it_flag, docker_name, home_vol_and_var)
+            docker_base = f"docker run --rm --name {docker_name} {home_vol_and_var}"
+            if interactive:
+                docker_base = f"{docker_base} -it"
             verbose_var = os.getenv("VERBOSE", "")
             docker_cmd = "%s {variables} -v $PWD:$PWD -e VERBOSE={verbose} {other_volumes} -v /etc/passwd:/etc/passwd " \
                          "%s " \
@@ -173,7 +175,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
 
     if len(sys.argv) > 1:
         if "SHELL" in str(sys.argv[1]).upper():
-            execute_in_docker("bash --login")
+            execute_in_docker(command="bash --login", interactive=True)
             exit(0)
 
     steps = []
