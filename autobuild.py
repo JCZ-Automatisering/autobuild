@@ -5,9 +5,10 @@ import sys
 import configparser
 import time
 import tempfile
+import re
 
 
-VERSION = 5
+VERSION = 6
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -20,6 +21,10 @@ print("Running autobuild v%d" % VERSION)
 def error(msg):
     print("FATAL ERROR: %s" % msg)
     sys.exit(1)
+
+
+def strip_comments(text):
+    return re.sub('//.*?\n|/\*.*?\*/', '', text, flags=re.S)
 
 
 if os.path.exists(AUTOBUILD_LOCAL_FILE):
@@ -175,27 +180,33 @@ with tempfile.NamedTemporaryFile() as tmp_file:
 
     with open(jenkins_file, "r") as jf:
         stage = ""
-        line = jf.readline()
-        while line:
-            line = line.strip()
+        while True:
+            input_line = jf.readline()
+            if not input_line:
+                break   # eof
+            stripped_line = input_line.strip()
+            line = strip_comments(stripped_line)
             if line.startswith("#") or line.startswith("//"):
-                line = jf.readline()
                 continue
             if line.startswith("stage('"):
                 split = line.split("'")
                 stage = split[1]
+                continue
 
             # if line.startswith("dockerImage.inside("):
             if line.find("docker") != -1 and line.find(".inside(") != -1:
                 step_counter = 0
                 while True:
-                    line = jf.readline()    # get next line which contains shell command
+                    input_line = jf.readline()    # get next line which contains shell command
+                    stripped_line = input_line.strip()
+                    line = strip_comments(stripped_line)
+                    if not line:
+                        continue        # empty line, no command here...
                     if "}" in line:
                         break
                     split = line.strip()[4:][:-2]
                     steps.append({"name": "%s:%d" % (stage, step_counter), "command": split})
                     step_counter += 1
-            line = jf.readline()
 
     if os.getenv("NO_BUILD"):
         for item in steps:
