@@ -8,7 +8,7 @@ import tempfile
 import re
 
 
-VERSION = 7
+VERSION = 8
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
