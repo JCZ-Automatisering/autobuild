@@ -147,7 +147,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
             docker_cmd = "%s {variables} -v $PWD:$PWD -e VERBOSE={verbose} {other_volumes} -v /etc/passwd:/etc/passwd " \
                          "%s " \
                          "-w $PWD " \
-                         "-u $(id -u) %s %s" % \
+                         "-u $(id -u):$(id -g) %s %s" % \
                          (docker_base, (extra_docker_run_args if extra_docker_run_args else ""), docker_name, command)
             docker_cmd = docker_cmd.format(verbose=verbose_var,
                                            other_volumes=other_volumes,
