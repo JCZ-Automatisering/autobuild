@@ -8,7 +8,7 @@ import tempfile
 import re
 
 
-VERSION = 8
+VERSION = 9
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -140,9 +140,12 @@ with tempfile.NamedTemporaryFile() as tmp_file:
                 it_flag = "-it"
             else:
                 it_flag = ""
-            docker_base = f"docker run --rm --name {docker_name} {home_vol_and_var}"
+            docker_base = "docker run --rm --name {docker_name} {home_vol_and_var}".format(
+                docker_name=docker_name,
+                home_vol_and_var=home_vol_and_var
+            )
             if interactive:
-                docker_base = f"{docker_base} -it"
+                docker_base = "%s -it" % docker_base
             verbose_var = os.getenv("VERBOSE", "")
             docker_cmd = "%s {variables} -v $PWD:$PWD -e VERBOSE={verbose} {other_volumes} -v /etc/passwd:/etc/passwd " \
                          "%s " \
