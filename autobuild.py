@@ -8,7 +8,7 @@ import tempfile
 import re
 
 
-VERSION = 9
+VERSION = 10
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -135,26 +135,32 @@ with tempfile.NamedTemporaryFile() as tmp_file:
                 error("HOME not set!")
 
             home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
-            other_volumes = "-v /etc/localtime:/etc/localtime -v /usr/share/zoneinfo:/user/share/zoneinfo -v /tmp:/tmp "
-            if sys.stdout.isatty():
-                it_flag = "-it"
-            else:
-                it_flag = ""
+            other_volumes = ""
+            try_volumes = ("/etc/localtime", "/usr/share/zoneinfo", "/etc/passwd", "/etc/group", "/tmp")
+            for vol_item in try_volumes:
+                if os.path.exists(vol_item):
+                    other_volumes = "-v %s:%s %s" % (vol_item, vol_item, other_volumes)
+
             docker_base = "docker run --rm --name {docker_name} {home_vol_and_var}".format(
                 docker_name=docker_name,
                 home_vol_and_var=home_vol_and_var
             )
             if interactive:
                 docker_base = "%s -it" % docker_base
-            verbose_var = os.getenv("VERBOSE", "")
-            docker_cmd = "%s {variables} -v $PWD:$PWD -e VERBOSE={verbose} {other_volumes} -v /etc/passwd:/etc/passwd " \
+            verbose_var = os.getenv("VERBOSE", None)
+            if verbose_var:
+                verbose_var = "-e VERBOSE=%s" % verbose_var
+            else:
+                verbose_var = ""
+            docker_cmd = "%s {variables} -v $PWD:$PWD {verbose_var} {other_volumes} " \
                          "%s " \
                          "-w $PWD " \
                          "-u $(id -u):$(id -g) %s %s" % \
                          (docker_base, (extra_docker_run_args if extra_docker_run_args else ""), docker_name, command)
             docker_cmd = docker_cmd.format(verbose=verbose_var,
                                            other_volumes=other_volumes,
-                                           variables=__generate_variables_string())
+                                           variables=__generate_variables_string(),
+                                           verbose_var=verbose_var)
             if os.getenv("WAIT"):
                 input()
             execute(docker_cmd)
