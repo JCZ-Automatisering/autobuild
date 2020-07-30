@@ -8,7 +8,7 @@ import tempfile
 import re
 
 
-VERSION = 10
+VERSION = 11
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -48,6 +48,9 @@ env_until = os.getenv("UNTIL")
 env_skip = os.getenv("SKIP", "").split(",")
 
 environment_variables_pass_through = []
+extra_volumes = []
+
+hostname = None
 
 docker_image = None
 extra_docker_run_args = None
@@ -87,9 +90,16 @@ else:
     if EVP in config:
         environment_variables_pass_through = config[EVP].split(",")
 
+    VOLS = "extra_volumes"
+    if VOLS in config:
+        extra_volumes = config[VOLS].split(",")
+
     DI = "dockerimage"
     if DI in config:
         docker_image = config[DI]
+
+    if "hostname" in config:
+        hostname = config["hostname"]
 
 
 docker_file_dir = os.path.dirname(docker_file)
@@ -111,6 +121,10 @@ def __generate_variables_string():
         var_item_content = os.getenv(var_item)
         if var_item_content:
             result += "-e %s=%s " % (var_item, var_item_content)
+
+    # special variable: hostname
+    if hostname:
+        result += "-h %s" % hostname
 
     return result
 
@@ -140,6 +154,12 @@ with tempfile.NamedTemporaryFile() as tmp_file:
             for vol_item in try_volumes:
                 if os.path.exists(vol_item):
                     other_volumes = "-v %s:%s %s" % (vol_item, vol_item, other_volumes)
+
+            for vol_item in extra_volumes:
+                if os.path.exists(vol_item):
+                    other_volumes = "-v %s:%s %s" % (vol_item, vol_item, other_volumes)
+                else:
+                    print("WARNING: requested to add volume %s to container, but directory/file not found!" % vol_item)
 
             docker_base = "docker run --rm --name {docker_name} {home_vol_and_var}".format(
                 docker_name=docker_name,
