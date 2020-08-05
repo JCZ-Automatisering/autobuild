@@ -8,11 +8,16 @@ import tempfile
 import re
 
 
-VERSION = 11
+VERSION = 12
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
 CONFIG_SECTION = "autobuild"
+
+INSIDE_DOCKER_ITEMS = (
+    "docker",
+    ".inside("
+)
 
 
 print("Running autobuild v%d" % VERSION)
@@ -114,6 +119,34 @@ def execute(command):
         sys.exit(r)
 
 
+def line_contains_any_of(the_line, items):
+    """
+    Determine if any of the members of items is present in the string, if so, return True
+    :param the_line: The input line to check against
+    :param items: The (list of) check items
+    :return: True if at least one item found, False otherwise
+    """
+    for the_item in items:
+        if the_item in the_line:
+            return True
+
+    return False
+
+
+def line_contains_all(the_line, items):
+    """
+    Determine if all of the members of items are present in the string, if so, return True
+    :param the_line: The input line to check against
+    :param items: The (list of) check items
+    :return: True if all items found, False otherwise
+    """
+    for the_item in items:
+        if the_item not in the_line:
+            return False
+
+    return True
+
+
 def __generate_variables_string():
     result = ""
 
@@ -210,38 +243,59 @@ with tempfile.NamedTemporaryFile() as tmp_file:
     steps = []
 
     with open(jenkins_file, "r") as jf:
+        in_script_tag = False
         stage = ""
         while True:
             input_line = jf.readline()
             if not input_line:
                 break   # eof
             stripped_line = input_line.strip()
+
+            # print("stage: %s input_line: %s" % (stage, stripped_line))
+
             line = strip_comments(stripped_line)
             if line.startswith("#") or line.startswith("//"):
                 continue
             if line.startswith("stage('"):
                 split = line.split("'")
                 stage = split[1]
+                in_script_tag = False       # reset
                 continue
 
-            # if line.startswith("dockerImage.inside("):
-            if line.find("docker") != -1 and line.find(".inside(") != -1:
-                step_counter = 0
-                while True:
-                    input_line = jf.readline()    # get next line which contains shell command
-                    stripped_line = input_line.strip()
-                    line = strip_comments(stripped_line)
-                    if not line:
-                        continue        # empty line, no command here...
-                    if "}" in line:
-                        break
-                    split = line.strip()[4:][:-2]
-                    steps.append({"name": "%s:%d" % (stage, step_counter), "command": split})
-                    step_counter += 1
+            if "script {" in line:
+                in_script_tag = True
+                continue
+
+            # only continue adding any content/commands if we found a script { tag
+            if in_script_tag:
+                # if line.startswith("dockerImage.inside("):
+                if line_contains_all(line, INSIDE_DOCKER_ITEMS):
+                    # run in docker:
+                    step_counter = 0
+                    while True:
+                        input_line = jf.readline()    # get next line which contains shell command
+                        stripped_line = input_line.strip()
+                        line = strip_comments(stripped_line)
+                        if not line:
+                            continue        # empty line, no command here...
+                        if "}" in line:
+                            break
+                        split = line.strip()[4:][:-2]
+                        steps.append({"name": "%s:%d" % (stage, step_counter), "command": split})
+                        step_counter += 1
+                elif line.startswith("sh("):
+                    # interesting line. check
+                    sh_line = line[4:-2]        # skip sh(' at the start and ') at the end
+                    steps.append({"name": stage, "command_no_docker": sh_line})
 
     if os.getenv("NO_BUILD"):
         for item in steps:
-            print("Step: %s \t\tCommand: %s" % (item['name'], item['command']))
+            the_name = item['name']
+            if "command" in item:
+                cmd = item['command']
+            else:
+                cmd = item['command_no_docker']
+            print("Step: %s \t\tCommand: %s" % (the_name, cmd))
         print("NO_BUILD set, stopping now")
         exit(0)
 
@@ -261,7 +315,10 @@ with tempfile.NamedTemporaryFile() as tmp_file:
                     execute_this_step = False
                     break
             if execute_this_step:
-                execute_in_docker(item['command'])
+                if "command_no_docker" in item:
+                    execute(item["command_no_docker"])
+                else:
+                    execute_in_docker(item['command'])
             else:
                 print(" skipping step %s as requested" % name)
             if env_until:
