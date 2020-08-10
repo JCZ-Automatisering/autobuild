@@ -8,7 +8,7 @@ import tempfile
 import re
 
 
-VERSION = 12
+VERSION = 13
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -73,7 +73,7 @@ if env_dockerfile and env_jenkinsfile:
 
     docker_file = env_dockerfile
     jenkins_file = env_jenkinsfile
-    docker_name = "autobuild_manual"
+    docker_name = os.getenv("CONTAINER_NAME", "autobuild_manual")
 
 else:
     print("Using settings from configuration")
@@ -85,7 +85,7 @@ else:
     cp.read(CONFIG_FILE)
     config = cp[CONFIG_SECTION]
 
-    docker_name = config['name']
+    docker_name = os.getenv("CONTAINER_NAME", config['name'])
     docker_file = config['dockerfile']
     jenkins_file = config['jenkinsfile']
     if 'extra_docker_args' in config:
