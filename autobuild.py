@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
 import helpers
-from helpers import execute as execute      # "shortcut"
+from config import Config
+
+# shortcuts:
+from helpers import execute as execute
+from helpers import execute_in_docker as execute_in_docker
 
 import os
 import sys
@@ -21,6 +25,8 @@ INSIDE_DOCKER_ITEMS = (
     ".inside("
 )
 
+the_config = Config()
+
 
 print("Running autobuild v%d" % VERSION)
 
@@ -39,153 +45,65 @@ if os.path.exists(AUTOBUILD_LOCAL_FILE):
                 os.environ[var] = value
 
 
-env_dockerfile = os.getenv("DOCKERFILE")
-env_jenkinsfile = os.getenv("JENKINSFILE")
 env_step = os.getenv("STEP")
 env_until = os.getenv("UNTIL")
 env_skip = os.getenv("SKIP", "").split(",")
 
-environment_variables_pass_through = []
-extra_volumes = []
-
-hostname = None
-
-docker_image = None
-extra_docker_run_args = None
+the_config.hostname = None
+the_config.docker_image = None
+the_config.extra_docker_run_args = None
 
 
-if env_dockerfile and not env_jenkinsfile or \
-        env_jenkinsfile and not env_dockerfile:
-    print("WARNING: you have to specify both DOCKERFILE and JENKINSFILE for this functionality to work!")
-    print(" continue in 1 second...")
-    time.sleep(1)
+if not os.path.exists(CONFIG_FILE):
+    helpers.error("config file %s does not exist" % CONFIG_FILE)
 
-if env_dockerfile and env_jenkinsfile:
-    print("Using environment settings Dockerfile = %s and Jenkinsfile = %s" %
-          (env_dockerfile, env_jenkinsfile))
+cp = configparser.ConfigParser()
+cp.read(CONFIG_FILE)
+config = cp[CONFIG_SECTION]
 
-    docker_file = env_dockerfile
-    jenkins_file = env_jenkinsfile
-    docker_name = os.getenv("CONTAINER_NAME", "autobuild_manual")
+the_config.docker_name = os.getenv("CONTAINER_NAME", config['name'])
+the_config.docker_file = os.getenv("DOCKERFILE", config['dockerfile'])
+the_config.jenkins_file = os.getenv("JENKINSFILE", config['jenkinsfile'])
+if 'extra_docker_args' in config:
+    the_config.extra_docker_run_args = config['extra_docker_args']
 
-else:
-    print("Using settings from configuration")
+EVP = "environment_variables"
+if EVP in config:
+    the_config.environment_variables_pass_through = config[EVP].split(",")
 
-    if not os.path.exists(CONFIG_FILE):
-        helpers.error("config file %s does not exist" % CONFIG_FILE)
+VOLS = "extra_volumes"
+if VOLS in config:
+    the_config.extra_volumes = config[VOLS].split(",")
 
-    cp = configparser.ConfigParser()
-    cp.read(CONFIG_FILE)
-    config = cp[CONFIG_SECTION]
+DI = "dockerimage"
+if DI in config:
+    the_config.docker_image = config[DI]
 
-    docker_name = os.getenv("CONTAINER_NAME", config['name'])
-    docker_file = config['dockerfile']
-    jenkins_file = config['jenkinsfile']
-    if 'extra_docker_args' in config:
-        extra_docker_run_args = config['extra_docker_args']
-
-    EVP = "environment_variables"
-    if EVP in config:
-        environment_variables_pass_through = config[EVP].split(",")
-
-    VOLS = "extra_volumes"
-    if VOLS in config:
-        extra_volumes = config[VOLS].split(",")
-
-    DI = "dockerimage"
-    if DI in config:
-        docker_image = config[DI]
-
-    if "hostname" in config:
-        hostname = config["hostname"]
+if "hostname" in config:
+    the_config.hostname = config["hostname"]
 
 
-docker_file_dir = os.path.dirname(docker_file)
+# docker_file_dir = os.path.dirname(the_config.docker_file)
 
 
-def __generate_variables_string():
-    result = ""
-
-    for var_item in environment_variables_pass_through:
-        var_item_content = os.getenv(var_item)
-        if var_item_content:
-            result += "-e %s=%s " % (var_item, var_item_content)
-
-    # special variable: hostname
-    if hostname:
-        result += "-h %s" % hostname
-
-    return result
+the_config.dump_config()
 
 
 with tempfile.NamedTemporaryFile() as tmp_file:
 
     __tmp_name = tmp_file.name
 
-    def execute_in_docker(command, interactive=False):
-        with open(__tmp_name, "w") as fp:
-            fp.write("#!/bin/sh\n\n%s\n" % command)
-
-        execute("cat %s | tail -n 1" % __tmp_name)
-
-        command = "/bin/sh %s" % __tmp_name
-        if os.getenv("NO_DOCKER"):
-            # just run it without docker...
-            execute(command)
-        else:
-            home = os.getenv("HOME")
-            if not home:
-                helpers.error("HOME not set!")
-
-            home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
-            other_volumes = ""
-            try_volumes = ("/etc/localtime", "/usr/share/zoneinfo", "/etc/passwd", "/etc/group", "/tmp")
-            for vol_item in try_volumes:
-                if os.path.exists(vol_item):
-                    other_volumes = "-v %s:%s %s" % (vol_item, vol_item, other_volumes)
-
-            for vol_item in extra_volumes:
-                if os.path.exists(vol_item):
-                    other_volumes = "-v %s:%s %s" % (vol_item, vol_item, other_volumes)
-                else:
-                    print("WARNING: requested to add volume %s to container, but directory/file not found!" % vol_item)
-
-            docker_base = "docker run --rm --name {docker_name} {home_vol_and_var}".format(
-                docker_name=docker_name,
-                home_vol_and_var=home_vol_and_var
-            )
-            if interactive:
-                docker_base = "%s -it" % docker_base
-            verbose_var = os.getenv("VERBOSE", None)
-            if verbose_var:
-                verbose_var = "-e VERBOSE=%s" % verbose_var
-            else:
-                verbose_var = ""
-            docker_cmd = "%s {variables} -v $PWD:$PWD {verbose_var} {other_volumes} " \
-                         "%s " \
-                         "-w $PWD " \
-                         "-u $(id -u):$(id -g) %s %s" % \
-                         (docker_base, (extra_docker_run_args if extra_docker_run_args else ""), docker_name, command)
-            docker_cmd = docker_cmd.format(verbose=verbose_var,
-                                           other_volumes=other_volumes,
-                                           variables=__generate_variables_string(),
-                                           verbose_var=verbose_var)
-            if os.getenv("WAIT"):
-                input()
-            execute(docker_cmd)
-
-
-    if docker_image:
-        print("Using configured Docker image %s\n" % docker_image)
-        cmd = "docker pull {docker_image}".format(docker_image=docker_image)
+    if the_config.docker_image:
+        print("Using configured Docker image %s\n" % the_config.docker_image)
+        cmd = "docker pull {docker_image}".format(docker_image=the_config.docker_image)
         execute(cmd)
     else:
         if os.getenv("NO_DOCKER"):
             print("Not building the docker image\n")
         else:
-            print("Using locally build Docker image %s\n" % docker_file)
+            print("Using locally build Docker image %s\n" % the_config.docker_file)
             cmd = "docker build -t {docker_name} -f {docker_file_name} .".format(
-                docker_name=docker_name, docker_file_name=docker_file
+                docker_name=the_config.docker_name, docker_file_name=the_config.docker_file
             )
             execute(cmd)
 
@@ -196,7 +114,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
 
     steps = []
 
-    with open(jenkins_file, "r") as jf:
+    with open(the_config.jenkins_file, "r") as jf:
         in_script_tag = False
         stage = ""
         while True:
@@ -259,7 +177,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
             print('checking step %s' % name)
             if env_step.upper() in name.upper():
                 print("Step: %s" % name)
-                execute_in_docker(item['command'])
+                execute_in_docker(item['command'], the_config)
             # else: skip because we are only interested in on "STEP"
         else:
             print("Step: %s" % name)
@@ -272,7 +190,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
                 if "command_no_docker" in item:
                     execute(item["command_no_docker"])
                 else:
-                    execute_in_docker(item['command'])
+                    execute_in_docker(item['command'], the_config)
             else:
                 print(" skipping step %s as requested" % name)
             if env_until:
