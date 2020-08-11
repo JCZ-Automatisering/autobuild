@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 
+import helpers
+
 import os
 import sys
 import configparser
 import time
 import tempfile
-import re
 
 
-VERSION = 13
+VERSION = 14
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -21,15 +22,6 @@ INSIDE_DOCKER_ITEMS = (
 
 
 print("Running autobuild v%d" % VERSION)
-
-
-def error(msg):
-    print("FATAL ERROR: %s" % msg)
-    sys.exit(1)
-
-
-def strip_comments(text):
-    return re.sub('//.*?\n|/\*.*?\*/', '', text, flags=re.S)
 
 
 if os.path.exists(AUTOBUILD_LOCAL_FILE):
@@ -79,7 +71,7 @@ else:
     print("Using settings from configuration")
 
     if not os.path.exists(CONFIG_FILE):
-        error("config file %s does not exist" % CONFIG_FILE)
+        helpers.error("config file %s does not exist" % CONFIG_FILE)
 
     cp = configparser.ConfigParser()
     cp.read(CONFIG_FILE)
@@ -179,7 +171,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
         else:
             home = os.getenv("HOME")
             if not home:
-                error("HOME not set!")
+                helpers.error("HOME not set!")
 
             home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
             other_volumes = ""
@@ -253,7 +245,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
 
             # print("stage: %s input_line: %s" % (stage, stripped_line))
 
-            line = strip_comments(stripped_line)
+            line = helpers.strip_comments(stripped_line)
             if line.startswith("#") or line.startswith("//"):
                 continue
             if line.startswith("stage('"):
@@ -275,7 +267,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
                     while True:
                         input_line = jf.readline()    # get next line which contains shell command
                         stripped_line = input_line.strip()
-                        line = strip_comments(stripped_line)
+                        line = helpers.strip_comments(stripped_line)
                         if not line:
                             continue        # empty line, no command here...
                         if "}" in line:
