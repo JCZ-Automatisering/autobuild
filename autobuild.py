@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import helpers
+from helpers import execute as execute      # "shortcut"
 
 import os
 import sys
@@ -102,43 +103,6 @@ else:
 docker_file_dir = os.path.dirname(docker_file)
 
 
-def execute(command):
-    print("EXEC: %s" % command)
-    r = os.system(command)
-    if not r == 0:
-        print(" FAILURE! (r=%s)" % r)
-        print(" COMMAND=\n\n%s\n" % command)
-        sys.exit(r)
-
-
-def line_contains_any_of(the_line, items):
-    """
-    Determine if any of the members of items is present in the string, if so, return True
-    :param the_line: The input line to check against
-    :param items: The (list of) check items
-    :return: True if at least one item found, False otherwise
-    """
-    for the_item in items:
-        if the_item in the_line:
-            return True
-
-    return False
-
-
-def line_contains_all(the_line, items):
-    """
-    Determine if all of the members of items are present in the string, if so, return True
-    :param the_line: The input line to check against
-    :param items: The (list of) check items
-    :return: True if all items found, False otherwise
-    """
-    for the_item in items:
-        if the_item not in the_line:
-            return False
-
-    return True
-
-
 def __generate_variables_string():
     result = ""
 
@@ -225,8 +189,6 @@ with tempfile.NamedTemporaryFile() as tmp_file:
             )
             execute(cmd)
 
-    execute("mkdir -p tmp")
-
     if len(sys.argv) > 1:
         if "SHELL" in str(sys.argv[1]).upper():
             execute_in_docker(command="bash --login", interactive=True)
@@ -261,7 +223,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
             # only continue adding any content/commands if we found a script { tag
             if in_script_tag:
                 # if line.startswith("dockerImage.inside("):
-                if line_contains_all(line, INSIDE_DOCKER_ITEMS):
+                if helpers.line_contains_all(line, INSIDE_DOCKER_ITEMS):
                     # run in docker:
                     step_counter = 0
                     while True:
