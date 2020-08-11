@@ -105,6 +105,17 @@ def __generate_variables_string(environment_variables_pass_through=(),
     return result
 
 
+def __escape_local_volume(the_volume):
+    """
+    Escape the local volume if running on Windows, otherwise, just return it as is.
+    :param the_volume: Volume
+    :return: Escaped volume
+    """
+    if OS_TYPE_WINDOWS in OS_TYPE:
+        return str(the_volume).replace("\"", "/")
+    return the_volume
+
+
 __script_name = "/tmp/the_script"
 
 
@@ -116,9 +127,11 @@ def execute_in_docker(command, the_config, interactive=False):
     :param interactive: Run with interactive flag (True) or not
     :return:
     """
+    __tmp_name = ""
+    __tmp_fp = None
     try:
-        _, __tmp_name = tempfile.mkstemp()
-        with open(__tmp_name, "w+") as fp:
+        __tmp_fp, __tmp_name = tempfile.mkstemp()
+        with open(__tmp_name, "w+", newline="\n") as fp:
             fp.write("#!/bin/sh\n\n%s\n" % command)
 
         print("command: %s" % command)
@@ -141,14 +154,15 @@ def execute_in_docker(command, the_config, interactive=False):
             try_volumes = ("/etc/localtime", "/usr/share/zoneinfo", "/etc/passwd", "/etc/group", "/tmp")
             for vol_item in try_volumes:
                 if os.path.exists(vol_item):
-                    other_volumes = "-v %s:%s %s" % (vol_item, vol_item, other_volumes)
+                    other_volumes = "-v %s:%s %s" %\
+                                    (__escape_local_volume(vol_item), vol_item, other_volumes)
 
             # script "volume":
-            other_volumes = "%s -v %s:%s" % (other_volumes, __tmp_name, __script_name)
+            other_volumes = "%s -v %s:%s" % (other_volumes, __escape_local_volume(__tmp_name), __script_name)
 
             for vol_item in the_config.extra_volumes:
                 if os.path.exists(vol_item):
-                    other_volumes = "-v %s:%s %s" % (vol_item, vol_item, other_volumes)
+                    other_volumes = "-v %s:%s %s" % (__escape_local_volume(vol_item), vol_item, other_volumes)
                 else:
                     print("WARNING: requested to add volume %s to container, but directory/file not found!" % vol_item)
 
@@ -198,6 +212,8 @@ def execute_in_docker(command, the_config, interactive=False):
                 input()
             execute(docker_cmd)
     except Exception as e:
-        os.unlink(__tmp_name)
         error("Exception during docker assembling/run")
+    finally:
+        os.close(__tmp_fp)
+        os.unlink(__tmp_name)
 
