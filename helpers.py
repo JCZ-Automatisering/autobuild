@@ -3,6 +3,7 @@ import sys
 import re
 import os
 import tempfile
+import subprocess
 
 
 OS_TYPE = platform.system()
@@ -71,8 +72,25 @@ def execute(command):
         sys.exit(r)
 
 
+def run_command_get_output(command):
+    """
+    Execute command and return output (as string)
+    :param command: The command to execute
+    :return: Result as string
+    """
+    result = subprocess.run(command.split(" "), stdout=subprocess.PIPE)
+    return result.stdout.decode('utf-8').strip()
+
+
 def __generate_variables_string(environment_variables_pass_through=(),
                                 hostname=None):
+    """
+    Helper function to generate a variables string to pass to Docker. Variables defined in the configuration but not
+    set in the environment are not added.
+    :param environment_variables_pass_through: The list of environment variable which should be relayed
+    :param hostname: Optional hostname to add
+    :return: String with all variables & hostname set (of applicable)
+    """
     result = ""
 
     for var_item in environment_variables_pass_through:
@@ -87,6 +105,9 @@ def __generate_variables_string(environment_variables_pass_through=(),
     return result
 
 
+__script_name = "/tmp/the_script"
+
+
 def execute_in_docker(command, the_config, interactive=False):
     """
     Execute a command in a Docker container
@@ -95,9 +116,9 @@ def execute_in_docker(command, the_config, interactive=False):
     :param interactive: Run with interactive flag (True) or not
     :return:
     """
-    with tempfile.NamedTemporaryFile() as tmp_file:
-        __tmp_name = tmp_file.name
-        with open(__tmp_name, "w") as fp:
+    try:
+        _, __tmp_name = tempfile.mkstemp()
+        with open(__tmp_name, "w+") as fp:
             fp.write("#!/bin/sh\n\n%s\n" % command)
 
         print("command: %s" % command)
@@ -107,16 +128,23 @@ def execute_in_docker(command, the_config, interactive=False):
             # just run it without docker...
             execute(command)
         else:
-            home = os.getenv("HOME")
-            if not home:
-                error("HOME not set!")
+            if OS_TYPE_WINDOWS not in OS_TYPE:
+                home = os.getenv("HOME")
+                if not home:
+                    error("HOME not set!")
 
-            home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
+                home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
+            else:
+                home_vol_and_var = ""
+
             other_volumes = ""
             try_volumes = ("/etc/localtime", "/usr/share/zoneinfo", "/etc/passwd", "/etc/group", "/tmp")
             for vol_item in try_volumes:
                 if os.path.exists(vol_item):
                     other_volumes = "-v %s:%s %s" % (vol_item, vol_item, other_volumes)
+
+            # script "volume":
+            other_volumes = "%s -v %s:%s" % (other_volumes, __tmp_name, __script_name)
 
             for vol_item in the_config.extra_volumes:
                 if os.path.exists(vol_item):
@@ -135,17 +163,41 @@ def execute_in_docker(command, the_config, interactive=False):
                 verbose_var = "-e VERBOSE=%s" % verbose_var
             else:
                 verbose_var = ""
-            docker_cmd = "%s {variables} -v $PWD:$PWD {verbose_var} {other_volumes} " \
+
+            local_dir = os.getcwd()
+            if OS_TYPE_WINDOWS in OS_TYPE:
+                # because we are running on windows, we cannot use our path in the container; use something different
+                # in that case, /code
+                remote_dir = "/code"
+                # and we also do not specify user settings -u
+                user_settings = ""
+            else:
+                remote_dir = local_dir
+                user_id = run_command_get_output("id -u")
+                group_id = run_command_get_output("id -g")
+                user_settings = "-u {user_id}:{group_id}".format(
+                    user_id=user_id,
+                    group_id=group_id
+                )
+            docker_cmd = "{docker_base} {variables} -v {local_dir}:{remote_dir} {verbose_var} {other_volumes} " \
                          "%s " \
-                         "-w $PWD " \
-                         "-u $(id -u):$(id -g) %s %s" % \
-                         (docker_base, (the_config.extra_docker_run_args if the_config.extra_docker_run_args else ""),
-                          the_config.docker_name, command)
-            docker_cmd = docker_cmd.format(verbose=verbose_var,
+                         "-w {remote_dir} " \
+                         "{user_settings} %s /bin/sh {the_script}" % \
+                         ((the_config.extra_docker_run_args if the_config.extra_docker_run_args else ""),
+                          the_config.docker_name)
+            docker_cmd = docker_cmd.format(docker_base=docker_base,
+                                           verbose=verbose_var,
                                            other_volumes=other_volumes,
                                            variables=__generate_variables_string(),
-                                           verbose_var=verbose_var)
+                                           verbose_var=verbose_var,
+                                           local_dir=local_dir,
+                                           remote_dir=remote_dir,
+                                           user_settings=user_settings,
+                                           the_script=__script_name)
             if os.getenv("WAIT"):
                 input()
             execute(docker_cmd)
+    except Exception as e:
+        os.unlink(__tmp_name)
+        error("Exception during docker assembling/run")
 

@@ -10,7 +10,6 @@ from helpers import execute_in_docker as execute_in_docker
 import os
 import sys
 import configparser
-import time
 import tempfile
 
 
@@ -90,7 +89,6 @@ the_config.dump_config()
 
 
 with tempfile.NamedTemporaryFile() as tmp_file:
-
     __tmp_name = tmp_file.name
 
     if the_config.docker_image:
