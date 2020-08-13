@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 14
+VERSION = 15
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -107,7 +107,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
 
     if len(sys.argv) > 1:
         if "SHELL" in str(sys.argv[1]).upper():
-            execute_in_docker(command="bash --login", interactive=True)
+            execute_in_docker(command="bash --login", the_config=the_config, interactive=True)
             exit(0)
 
     steps = []
