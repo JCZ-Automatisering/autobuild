@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 15
+VERSION = 16
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -135,6 +135,10 @@ with tempfile.NamedTemporaryFile() as tmp_file:
             if "script {" in line:
                 in_script_tag = True
                 continue
+
+            if "post {" in line:
+                # eof interesting area reached, break the loop.
+                break
 
             # only continue adding any content/commands if we found a script { tag
             if in_script_tag:
