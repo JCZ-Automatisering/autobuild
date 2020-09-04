@@ -58,10 +58,11 @@ def line_contains_all(the_line, items):
     return True
 
 
-def execute(command):
+def execute(command, optional_error_message=None):
     """
     Execute a command and exit with a fatal error (message) when it fails
     :param command: The command to execute
+    :param optional_error_message: The optional error message to print when the command fails
     :return:
     """
     print("EXEC: %s" % command)
@@ -69,6 +70,8 @@ def execute(command):
     if not r == 0:
         print(" FAILURE! (r=%s)" % r)
         print(" COMMAND=\n\n%s\n" % command)
+        if optional_error_message:
+            print(optional_error_message)
         sys.exit(r)
 
 
@@ -119,12 +122,13 @@ def __escape_local_volume(the_volume):
 __script_name = "/tmp/the_script"
 
 
-def execute_in_docker(command, the_config, interactive=False):
+def execute_in_docker(command, the_config, interactive=False, optional_error_message=None):
     """
     Execute a command in a Docker container
     :param command: The command to execute in the Docker container
     :param the_config: Instance of Config()
     :param interactive: Run with interactive flag (True) or not
+    :param optional_error_message: Optional error message to print when command fails
     :return:
     """
     __tmp_name = ""
@@ -139,7 +143,7 @@ def execute_in_docker(command, the_config, interactive=False):
         command = "/bin/sh %s" % __tmp_name
         if os.getenv("NO_DOCKER"):
             # just run it without docker...
-            execute(command)
+            execute(command, optional_error_message=optional_error_message)
         else:
             if OS_TYPE_WINDOWS not in OS_TYPE:
                 home = os.getenv("HOME")
@@ -210,7 +214,7 @@ def execute_in_docker(command, the_config, interactive=False):
                                            the_script=__script_name)
             if os.getenv("WAIT"):
                 input()
-            execute(docker_cmd)
+            execute(docker_cmd, optional_error_message=optional_error_message)
     except Exception as e:
         error("Exception during docker assembling/run")
     finally:

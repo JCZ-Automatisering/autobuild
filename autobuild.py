@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 16
+VERSION = 17
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -175,11 +175,12 @@ with tempfile.NamedTemporaryFile() as tmp_file:
 
     for item in steps:
         name = item['name']
+        optional_error_message = "step: {} failed".format(name)
         if env_step:
             print('checking step %s' % name)
             if env_step.upper() in name.upper():
                 print("Step: %s" % name)
-                execute_in_docker(item['command'], the_config)
+                execute_in_docker(item['command'], the_config, optional_error_message=optional_error_message)
             # else: skip because we are only interested in on "STEP"
         else:
             print("Step: %s" % name)
@@ -190,9 +191,9 @@ with tempfile.NamedTemporaryFile() as tmp_file:
                     break
             if execute_this_step:
                 if "command_no_docker" in item:
-                    execute(item["command_no_docker"])
+                    execute(item["command_no_docker"], optional_error_message=optional_error_message)
                 else:
-                    execute_in_docker(item['command'], the_config)
+                    execute_in_docker(item['command'], the_config, optional_error_message=optional_error_message)
             else:
                 print(" skipping step %s as requested" % name)
             if env_until:
