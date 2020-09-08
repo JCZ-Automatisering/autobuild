@@ -206,7 +206,7 @@ def execute_in_docker(command, the_config, interactive=False, optional_error_mes
             docker_cmd = docker_cmd.format(docker_base=docker_base,
                                            verbose=verbose_var,
                                            other_volumes=other_volumes,
-                                           variables=__generate_variables_string(),
+                                           variables=__generate_variables_string(the_config.environment_variables_pass_through),
                                            verbose_var=verbose_var,
                                            local_dir=local_dir,
                                            remote_dir=remote_dir,
