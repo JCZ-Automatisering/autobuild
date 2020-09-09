@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 18
+VERSION = 19
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -69,6 +69,8 @@ if 'extra_docker_args' in config:
 EVP = "environment_variables"
 if EVP in config:
     the_config.environment_variables_pass_through = config[EVP].split(",")
+else:
+    the_config.environment_variables_pass_through = ()      # empty list: no env vars to pass through
 
 VOLS = "extra_volumes"
 if VOLS in config:
