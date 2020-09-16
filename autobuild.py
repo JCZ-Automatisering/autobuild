@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 19
+VERSION = 20
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"

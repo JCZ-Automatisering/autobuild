@@ -27,7 +27,10 @@ def strip_comments(text):
     :param text:
     :return: Stripped text
     """
-    return re.sub('//.*?\n|/\*.*?\*/', '', text, flags=re.S)
+    result = re.sub('//.*?\n|/\*.*?\*/', '', text, flags=re.S)
+    if result.startswith("//"):
+        return ""
+    return result
 
 
 def line_contains_any_of(the_line, items):
