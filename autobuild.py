@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 20
+VERSION = 21
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -71,6 +71,16 @@ if EVP in config:
     the_config.environment_variables_pass_through = config[EVP].split(",")
 else:
     the_config.environment_variables_pass_through = ()      # empty list: no env vars to pass through
+
+SEV = "set_environment_variables"
+if SEV in config:
+    the_items = config[SEV].split(";")
+    for item in the_items:
+        split = item.split("=")
+        if len(split) == 2:
+            name = split[0]
+            value = split[1]
+            the_config.set_environment_variables[name] = value
 
 VOLS = "extra_volumes"
 if VOLS in config:

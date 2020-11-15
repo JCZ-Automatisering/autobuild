@@ -89,11 +89,13 @@ def run_command_get_output(command):
 
 
 def __generate_variables_string(environment_variables_pass_through=(),
+                                environment_variables_set={},
                                 hostname=None):
     """
     Helper function to generate a variables string to pass to Docker. Variables defined in the configuration but not
     set in the environment are not added.
     :param environment_variables_pass_through: The list of environment variable which should be relayed
+    :param environment_variables_set: The dict of variables to set if not yet present in environment
     :param hostname: Optional hostname to add
     :return: String with all variables & hostname set (of applicable)
     """
@@ -103,6 +105,11 @@ def __generate_variables_string(environment_variables_pass_through=(),
         var_item_content = os.getenv(var_item)
         if var_item_content:
             result += "-e %s=%s " % (var_item, var_item_content)
+
+    for var_item in environment_variables_set:
+        check = "%s=" % var_item
+        if check not in result:
+            result += "-e %s=%s " % (var_item, environment_variables_set[var_item])
 
     # special variable: hostname
     if hostname:
@@ -206,10 +213,12 @@ def execute_in_docker(command, the_config, interactive=False, optional_error_mes
                          "{user_settings} %s /bin/sh {the_script}" % \
                          ((the_config.extra_docker_run_args if the_config.extra_docker_run_args else ""),
                           the_config.docker_name)
+            variables = __generate_variables_string(the_config.environment_variables_pass_through,
+                                                    the_config.set_environment_variables)
             docker_cmd = docker_cmd.format(docker_base=docker_base,
                                            verbose=verbose_var,
                                            other_volumes=other_volumes,
-                                           variables=__generate_variables_string(the_config.environment_variables_pass_through),
+                                           variables=variables,
                                            verbose_var=verbose_var,
                                            local_dir=local_dir,
                                            remote_dir=remote_dir,

@@ -11,6 +11,8 @@ class Config:
 
         self.extra_volumes = []
 
+        self.set_environment_variables = {}
+
     def dump_config(self):
         print("Configuration:\n")
         for item in self.__dict__.keys():
