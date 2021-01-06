@@ -33,6 +33,8 @@ The following environment variables can be used to control certain behaviour of 
 |STEP|Run just one Jenkinsfile step|Allow the operator to run just one step from the Jenkinsfile|STEP=doxygen ./autobuild.py
 |UNTIL|Run until a certain step from the Jenkinsfile|Run all steps until (including) a certain step is found|UNTIL=build ./autobuild.py
 |SKIP|Skip one or more steps from the Jenkinsfile|Allow skipping certain steps while executing all others|SKIP=doxygen,cppcheck \ ./autobuild.py
+|CONTAINER_NAME|Name of the container|Allow to specify a different name for the container while running instead of the default name|CONTAINER_NAME=my_local_build_container|
+|NO_DOCKER|Disable use of docker|Allows disabling Docker integration; in that case every command from the Jenkinsfile is executed locally instead of in a container|NO_DOCKER=yes|
 
 
 ## More configuration
