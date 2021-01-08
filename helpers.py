@@ -75,7 +75,7 @@ def execute(command, optional_error_message=None):
         print(" COMMAND=\n\n%s\n" % command)
         if optional_error_message:
             print(optional_error_message)
-        sys.exit(r)
+        sys.exit(1)
 
 
 def run_command_get_output(command):
@@ -225,6 +225,7 @@ def execute_in_docker(command, the_config, interactive=False, optional_error_mes
                                            user_settings=user_settings,
                                            the_script=__script_name)
             if os.getenv("WAIT"):
+                print("\npress any key to continue...\n")
                 input()
             execute(docker_cmd, optional_error_message=optional_error_message)
     except Exception as e:

@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 22
+VERSION = 23
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -96,8 +96,8 @@ if "hostname" in config:
 
 # docker_file_dir = os.path.dirname(the_config.docker_file)
 
-
-the_config.dump_config()
+if not os.getenv("QUIET"):
+    the_config.dump_config()
 
 
 with tempfile.NamedTemporaryFile() as tmp_file:
