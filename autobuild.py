@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 24
+VERSION = 25
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -46,7 +46,11 @@ if os.path.exists(AUTOBUILD_LOCAL_FILE):
 
 env_step = os.getenv("STEP")
 env_until = os.getenv("UNTIL")
-env_skip = os.getenv("SKIP", "").split(",")
+env_skip_data = os.getenv("SKIP", None)
+if env_skip_data:
+    env_skip = env_skip_data.split(",")
+else:
+    env_skip = []
 
 the_config.hostname = None
 the_config.docker_image = None
@@ -65,6 +69,11 @@ the_config.docker_file = os.getenv("DOCKERFILE", config['dockerfile'])
 the_config.jenkins_file = os.getenv("JENKINSFILE", config['jenkinsfile'])
 if 'extra_docker_args' in config:
     the_config.extra_docker_run_args = config['extra_docker_args']
+
+if 'skip' in config:
+    the_config.skip = config['skip'].split(',')
+    if len(env_skip) == 0:
+        env_skip = the_config.skip
 
 EVP = "environment_variables"
 if EVP in config:

@@ -11,6 +11,8 @@ class Config:
 
         self.extra_volumes = []
 
+        self.skip = []
+
         self.set_environment_variables = {}
 
     def dump_config(self):
