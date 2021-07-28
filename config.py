@@ -14,8 +14,14 @@ class Config:
         self.skip = []
 
         self.set_environment_variables = {}
+        self.environment_variables_pass_through = ()
+
+        self.volume_one_up = False
 
     def dump_config(self):
         print("Configuration:\n")
         for item in self.__dict__.keys():
             print("\t%s = %s" % (item, getattr(self, item)))
+
+    def load_config(self, section):
+        pass

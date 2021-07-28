@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 25
+VERSION = 26
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -78,8 +78,6 @@ if 'skip' in config:
 EVP = "environment_variables"
 if EVP in config:
     the_config.environment_variables_pass_through = config[EVP].split(",")
-else:
-    the_config.environment_variables_pass_through = ()      # empty list: no env vars to pass through
 
 SEV = "set_environment_variables"
 if SEV in config:
@@ -101,6 +99,10 @@ if DI in config:
 
 if "hostname" in config:
     the_config.hostname = config["hostname"]
+
+VOU = "volume_one_up"
+if VOU in config:
+    the_config.volume_one_up = helpers.string_to_bool(config[VOU])
 
 
 # docker_file_dir = os.path.dirname(the_config.docker_file)

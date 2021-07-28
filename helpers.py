@@ -5,6 +5,8 @@ import os
 import tempfile
 import subprocess
 
+import config
+import helpers
 
 OS_TYPE = platform.system()
 OS_TYPE_WINDOWS = "Windows"
@@ -19,6 +21,20 @@ def error(msg, return_code=1):
     """
     print("FATAL ERROR: %s" % msg)
     sys.exit(return_code)
+
+
+__TRUE_LIST = ("yes", "true", "1")
+
+
+def string_to_bool(data: str):
+    """
+    Try to convert a string to a boolean, defaults to False
+    :param data: The data to "scan"
+    :return: True if detected true, False otherwise
+    """
+    if data.lower() in __TRUE_LIST:
+        return True
+    return False
 
 
 def strip_comments(text):
@@ -132,7 +148,7 @@ def __escape_local_volume(the_volume):
 __script_name = "/tmp/the_script"
 
 
-def execute_in_docker(command, the_config, interactive=False, optional_error_message=None):
+def execute_in_docker(command, the_config: config.Config, interactive=False, optional_error_message=None):
     """
     Execute a command in a Docker container
     :param command: The command to execute in the Docker container
@@ -160,7 +176,7 @@ def execute_in_docker(command, the_config, interactive=False, optional_error_mes
                 if not home:
                     error("HOME not set!")
 
-                home_vol_and_var = "-v %s:%s -e HOME=%s" % (home, home, home)
+                home_vol_and_var = "-v {home}:{home} -e HOME={home}".format(home=home)
             else:
                 home_vol_and_var = ""
 
@@ -196,34 +212,33 @@ def execute_in_docker(command, the_config, interactive=False, optional_error_mes
             if OS_TYPE_WINDOWS in OS_TYPE:
                 # because we are running on windows, we cannot use our path in the container; use something different
                 # in that case, /code
+                if the_config.volume_one_up:
+                    print("Volume one up not yet supported on windows, skipping...")
                 remote_dir = "/code"
+                work_dir = remote_dir
                 # and we also do not specify user settings -u
                 user_settings = ""
             else:
-                remote_dir = local_dir
+                work_dir = local_dir
+                if the_config.volume_one_up:
+                    remote_dir = os.path.dirname(local_dir)     # one up
+                    local_dir = remote_dir
+                else:
+                    remote_dir = local_dir
                 user_id = run_command_get_output("id -u")
                 group_id = run_command_get_output("id -g")
-                user_settings = "-u {user_id}:{group_id}".format(
-                    user_id=user_id,
-                    group_id=group_id
-                )
-            docker_cmd = "{docker_base} {variables} -v {local_dir}:{remote_dir} {verbose_var} {other_volumes} " \
-                         "%s " \
-                         "-w {remote_dir} " \
-                         "{user_settings} %s /bin/sh {the_script}" % \
-                         ((the_config.extra_docker_run_args if the_config.extra_docker_run_args else ""),
-                          the_config.docker_name)
+                user_settings = f"-u {user_id}:{group_id}"
+
+            if the_config.extra_docker_run_args:
+                extra_args = the_config.extra_docker_run_args
+            else:
+                extra_args = ""
             variables = __generate_variables_string(the_config.environment_variables_pass_through,
                                                     the_config.set_environment_variables)
-            docker_cmd = docker_cmd.format(docker_base=docker_base,
-                                           verbose=verbose_var,
-                                           other_volumes=other_volumes,
-                                           variables=variables,
-                                           verbose_var=verbose_var,
-                                           local_dir=local_dir,
-                                           remote_dir=remote_dir,
-                                           user_settings=user_settings,
-                                           the_script=__script_name)
+            docker_cmd = f"{docker_base} {extra_args} {variables} -v {local_dir}:{remote_dir} {verbose_var} " \
+                         f"{other_volumes} -w {work_dir} " \
+                         f"{user_settings} {the_config.docker_name} /bin/sh {__script_name}"
+
             if os.getenv("WAIT"):
                 print("\npress any key to continue...\n")
                 input()
