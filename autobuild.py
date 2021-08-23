@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 26
+VERSION = 27
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -45,6 +45,10 @@ if os.path.exists(AUTOBUILD_LOCAL_FILE):
 
 
 env_step = os.getenv("STEP")
+if env_step and "," in env_step:
+    env_steps = env_step.split(",")
+else:
+    env_steps = None
 env_until = os.getenv("UNTIL")
 env_skip_data = os.getenv("SKIP", None)
 if env_skip_data:
@@ -183,7 +187,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
                         if "}" in line:
                             break
                         split = line.strip()[4:][:-2]
-                        steps.append({"name": "%s:%d" % (stage, step_counter), "command": split})
+                        steps.append({"name": "%s:%d" % (stage, step_counter), "stage": stage, "command": split})
                         step_counter += 1
                 elif line.startswith("sh("):
                     # interesting line. check
@@ -202,32 +206,40 @@ with tempfile.NamedTemporaryFile() as tmp_file:
         exit(0)
 
     for item in steps:
+        execute_this_step = True
         name = item['name']
+        stage = item['stage']
         optional_error_message = "step: {} failed".format(name)
-        if env_step:
-            print('checking step %s' % name)
-            if env_step.upper() in name.upper():
-                print("Step: %s" % name)
-                execute_in_docker(item['command'], the_config, optional_error_message=optional_error_message)
-            # else: skip because we are only interested in on "STEP"
+
+        print("Step: %s" % name)
+
+        if env_steps:
+            if stage not in env_steps:
+                execute_this_step = False
         else:
-            print("Step: %s" % name)
-            execute_this_step = True
-            for skip_item in env_skip:
-                if skip_item and skip_item in name:
-                    execute_this_step = False
-                    break
-            if execute_this_step:
-                if "command_no_docker" in item:
-                    execute(item["command_no_docker"], optional_error_message=optional_error_message)
-                else:
+            if env_step:
+                if env_step.upper() in name.upper():
+                    print("Step: %s" % name)
                     execute_in_docker(item['command'], the_config, optional_error_message=optional_error_message)
+                else:
+                    execute_this_step = False
+
+        for skip_item in env_skip:
+            if skip_item and skip_item in name:
+                execute_this_step = False
+                break
+
+        if execute_this_step:
+            if "command_no_docker" in item:
+                execute(item["command_no_docker"], optional_error_message=optional_error_message)
             else:
-                print(" skipping step %s as requested" % name)
-            if env_until:
-                if env_until in name:
-                    print("Until %s reached. Stopping." % env_until)
-                    exit(0)
+                execute_in_docker(item['command'], the_config, optional_error_message=optional_error_message)
+        else:
+            print(" skipping step %s as requested" % name)
+        if env_until:
+            if env_until in name:
+                print("Until %s reached. Stopping." % env_until)
+                exit(0)
 
         os.system("sync")
 
