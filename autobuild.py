@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 27
+VERSION = 28
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -208,7 +208,10 @@ with tempfile.NamedTemporaryFile() as tmp_file:
     for item in steps:
         execute_this_step = True
         name = item['name']
-        stage = item['stage']
+        if 'stage' in item:
+            stage = item['stage']
+        else:
+            stage = ""
         optional_error_message = "step: {} failed".format(name)
 
         print("Step: %s" % name)
