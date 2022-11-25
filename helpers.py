@@ -6,7 +6,7 @@ import tempfile
 import subprocess
 
 import config
-import helpers
+
 
 OS_TYPE = platform.system()
 OS_TYPE_WINDOWS = "Windows"
@@ -91,6 +91,10 @@ def execute(command, optional_error_message=None):
         print(" COMMAND=\n\n%s\n" % command)
         if optional_error_message:
             print(optional_error_message)
+        if os.getenv("AUTOBUILD_IGNORE_ERROR"):
+            print(" ignoring (execute) error as requested by environment variable")
+            return
+
         sys.exit(1)
 
 
