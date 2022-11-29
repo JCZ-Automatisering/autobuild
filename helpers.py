@@ -77,11 +77,12 @@ def line_contains_all(the_line, items):
     return True
 
 
-def execute(command, optional_error_message=None):
+def execute(command, optional_error_message=None, ignore_error=False):
     """
     Execute a command and exit with a fatal error (message) when it fails
     :param command: The command to execute
     :param optional_error_message: The optional error message to print when the command fails
+    :param ignore_error: If true, ignore any non 0 return code and continue
     :return:
     """
     print("EXEC: %s" % command)
@@ -91,10 +92,8 @@ def execute(command, optional_error_message=None):
         print(" COMMAND=\n\n%s\n" % command)
         if optional_error_message:
             print(optional_error_message)
-        if os.getenv("AUTOBUILD_IGNORE_ERROR"):
-            print(" ignoring (execute) error as requested by environment variable")
+        if ignore_error:
             return
-
         sys.exit(1)
 
 
@@ -149,16 +148,26 @@ def __escape_local_volume(the_volume):
     return the_volume
 
 
+def get_user_id():
+    return run_command_get_output("id -u")
+
+
+def get_group_id():
+    return run_command_get_output("id -g")
+
+
 __script_name = "/tmp/the_script"
 
 
-def execute_in_docker(command, the_config: config.Config, interactive=False, optional_error_message=None):
+def execute_in_docker(command, the_config: config.Config, interactive=False, optional_error_message=None,
+                      ignore_error=False):
     """
     Execute a command in a Docker container
     :param command: The command to execute in the Docker container
     :param the_config: Instance of Config()
     :param interactive: Run with interactive flag (True) or not
     :param optional_error_message: Optional error message to print when command fails
+    :param ignore_error: If true, ignore step error and continue
     :return:
     """
     __tmp_name = ""
@@ -229,8 +238,8 @@ def execute_in_docker(command, the_config: config.Config, interactive=False, opt
                     local_dir = remote_dir
                 else:
                     remote_dir = local_dir
-                user_id = run_command_get_output("id -u")
-                group_id = run_command_get_output("id -g")
+                user_id = get_user_id()
+                group_id = get_group_id()
                 user_settings = f"-u {user_id}:{group_id}"
 
             if the_config.extra_docker_run_args:
@@ -246,7 +255,7 @@ def execute_in_docker(command, the_config: config.Config, interactive=False, opt
             if os.getenv("WAIT"):
                 print("\npress any key to continue...\n")
                 input()
-            execute(docker_cmd, optional_error_message=optional_error_message)
+            execute(docker_cmd, optional_error_message=optional_error_message, ignore_error=ignore_error)
     except Exception as e:
         error("Exception during docker assembling/run")
     finally:

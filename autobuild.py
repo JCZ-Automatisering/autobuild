@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 29
+VERSION = 30
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -55,6 +55,12 @@ if env_skip_data:
     env_skip = env_skip_data.split(",")
 else:
     env_skip = []
+
+env_ignore_error_step = os.getenv("AUTOBUILD_IGNORE_FAIL_STEPS")
+if env_ignore_error_step:
+    env_ignore_error_step = env_ignore_error_step.split(",")
+else:
+    env_ignore_error_step = ()
 
 the_config.hostname = None
 the_config.docker_image = None
@@ -223,7 +229,13 @@ with tempfile.NamedTemporaryFile() as tmp_file:
             if env_step:
                 if env_step.upper() in name.upper():
                     print("Step: %s" % name)
-                    execute_in_docker(item['command'], the_config, optional_error_message=optional_error_message)
+                    if name in env_ignore_error_step:
+                        ignore_error = True
+                    else:
+                        ignore_error = False
+
+                    execute_in_docker(item['command'], the_config, optional_error_message=optional_error_message,
+                                      ignore_error=ignore_error)
                 else:
                     execute_this_step = False
 
@@ -233,10 +245,17 @@ with tempfile.NamedTemporaryFile() as tmp_file:
                 break
 
         if execute_this_step:
-            if "command_no_docker" in item:
-                execute(item["command_no_docker"], optional_error_message=optional_error_message)
+            if stage in env_ignore_error_step:
+                ignore_error = True
             else:
-                execute_in_docker(item['command'], the_config, optional_error_message=optional_error_message)
+                ignore_error = False
+
+            if "command_no_docker" in item:
+                execute(item["command_no_docker"], optional_error_message=optional_error_message,
+                        ignore_error=ignore_error)
+            else:
+                execute_in_docker(item['command'], the_config, optional_error_message=optional_error_message,
+                                  ignore_error=ignore_error)
         else:
             print(" skipping step %s as requested" % name)
         if env_until:
