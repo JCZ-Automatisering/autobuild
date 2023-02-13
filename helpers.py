@@ -189,7 +189,7 @@ def execute_in_docker(command, the_config: config.Config, interactive=False, opt
                 if not home:
                     error("HOME not set!")
 
-                home_vol_and_var = "-v {home}:{home} -e HOME={home}".format(home=home)
+                home_vol_and_var = "-v {home}:{home} -v /tmp:{home}/.local -e HOME={home}".format(home=home)
             else:
                 home_vol_and_var = ""
 
