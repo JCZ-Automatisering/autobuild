@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 31
+VERSION = 32
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -227,7 +227,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
                 execute_this_step = False
         else:
             if env_step:
-                if env_step.upper() in name.upper():
+                if name.upper().startswith(env_step.upper()):
                     print("Step: %s" % name)
                     if name in env_ignore_error_step:
                         ignore_error = True
@@ -236,6 +236,7 @@ with tempfile.NamedTemporaryFile() as tmp_file:
 
                     execute_in_docker(item['command'], the_config, optional_error_message=optional_error_message,
                                       ignore_error=ignore_error)
+                    continue    # next step please.
                 else:
                     execute_this_step = False
 
