@@ -13,7 +13,7 @@ import configparser
 import tempfile
 
 
-VERSION = 32
+VERSION = 33
 
 AUTOBUILD_LOCAL_FILE = "autobuild.local"
 CONFIG_FILE = "autobuild.ini"
@@ -93,7 +93,7 @@ SEV = "set_environment_variables"
 if SEV in config:
     the_items = config[SEV].split(";")
     for item in the_items:
-        split = item.split("=")
+        split = item.split("=", maxsplit=1)
         if len(split) == 2:
             name = split[0]
             value = split[1]
